@@ -209,7 +209,42 @@ async function pollPrepare(simId,taskId){
   }
 }
 
+function notifyDone(msg){
+  document.title="✅ "+msg;
+  log("DONE ✓ "+msg);
+  try{
+    if(Notification.permission==="granted") new Notification("MiroFish",{body:msg});
+  }catch(e){}
+  try{
+    const ctx=new (window.AudioContext||window.webkitAudioContext)();
+    const o=ctx.createOscillator(),g=ctx.createGain();
+    o.connect(g);g.connect(ctx.destination);o.frequency.value=880;g.gain.value=0.08;
+    o.start();o.stop(ctx.currentTime+0.4);
+  }catch(e){}
+}
+async function monitor(simId){
+  let sawRunning=false;
+  const TERMINAL=["completed","finished","stopped","failed","error"];
+  for(;;){
+    await sleep(60000);
+    let st;
+    try{ st=await api(`/api/simulation/${simId}/run-status`); }
+    catch(e){ log("status check failed: "+e.message); continue; }
+    const rs=(st.runner_status||"").toLowerCase();
+    if(rs==="running"){
+      sawRunning=true;
+      const p=st.progress_percent?` (${Math.round(st.progress_percent)}%)`:"";
+      document.title=`▶ round ${st.current_round??"?"}/${st.total_rounds??"?"}${p} — MiroFish`;
+      continue;
+    }
+    if(TERMINAL.includes(rs)||(sawRunning&&rs==="idle")){
+      notifyDone(rs==="failed"||rs==="error"?"Run ended with an error — check the MiroFish UI.":"Simulation finished — the report is ready in the MiroFish UI.");
+      return;
+    }
+  }
+}
 $("go").addEventListener("click",async()=>{
+  try{ if(Notification.permission==="default") Notification.requestPermission(); }catch(e){}
   const flag=$("flag"); flag.classList.remove("on");
   const files=$("files").files;
   if(!$("task").value.trim()||!$("outcome").value.trim()){flag.textContent="Fill in the task and the outcome first.";flag.classList.add("on");return}
@@ -243,10 +278,11 @@ $("go").addEventListener("click",async()=>{
     setStep(4,"run");
     await api("/api/simulation/start",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({simulation_id:sim.simulation_id,platform:plat,max_rounds:+val("effort")})});
     setStep(4,"done");
-    log("RUNNING ✓ — watch it in the MiroFish UI.");
+    log("RUNNING ✓ — keep this PC awake; I'll notify you here when it finishes.");
     btn.textContent="Running — open MiroFish UI ↗";
     btn.disabled=false;
     btn.onclick=()=>window.open(`http://${location.hostname||"localhost"}:3000/`,"_blank");
+    monitor(sim.simulation_id);
   }catch(e){
     log("ERROR: "+e.message);
     document.querySelectorAll(".steps li.run").forEach(li=>li.className="fail");
