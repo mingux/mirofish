@@ -1,0 +1,7 @@
+# Overlay: lets the container reach an Ollama server on the host machine.
+# Usage: docker compose -f docker-compose.yml -f docker-compose.ollama.yml up -d
+# (start.ps1 -Ollama does this for you)
+services:
+  mirofish:
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

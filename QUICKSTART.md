@@ -6,6 +6,8 @@ My standalone import of [666ghj/MiroFish](https://github.com/666ghj/MiroFish)
 - `start.ps1` — one-click start on Windows (checks `.env`, starts Docker)
 - `docker-compose.build.yml` — builds the image **from this source** instead
   of pulling the maintainer's prebuilt image (better supply-chain posture)
+- `docker-compose.ollama.yml` — overlay letting the container reach a local
+  Ollama server, for free local models (used by `start.ps1 -Ollama`)
 - This file. Everything else is untouched upstream source — see `README.md`
   for the full original docs.
 
@@ -37,6 +39,25 @@ Or manually: `docker compose up -d` (prebuilt) /
 - API: http://localhost:5001
 
 Stop with `docker compose down`.
+
+## Free local models (Ollama) — no LLM API costs
+
+Install [Ollama](https://ollama.com/download), then:
+
+```powershell
+./start.ps1 -Ollama                          # default model: qwen2.5:14b-instruct
+./start.ps1 -Ollama -Model qwen2.5:32b       # bigger = better agents, needs more VRAM
+```
+
+The script checks Ollama is running, pulls the model if needed, and rewrites
+the `LLM_*` lines in `.env` to point at `host.docker.internal:11434` (previous
+`.env` saved as `.env.bak`). You still need a `ZEP_API_KEY` (free tier).
+
+Expectations: ~14B models are the quality floor for believable agents; local
+runs are much slower than a cloud API (a 10-agent × 30-round test can take an
+hour+ on a consumer GPU); Qwen models handle multilingual simulations well.
+To switch back to a cloud API, restore `.env.bak` or edit the `LLM_*` lines
+and run `./start.ps1` again.
 
 ## 3. Usage notes
 
