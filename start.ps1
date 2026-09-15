@@ -60,6 +60,15 @@ if ($Ollama) {
     Write-Host "Configured .env for Ollama model '$Model' (backup in .env.bak)." -ForegroundColor Green
 }
 
+# Drop optional LLM_BOOST_* lines still holding placeholders - upstream requires
+# them absent when unused, and they'd trip the placeholder check below.
+$lines = Get-Content ".env"
+$kept = $lines | Where-Object { $_ -notmatch "^LLM_BOOST_.*(your_[a-z_]*_here)" }
+if ($kept.Count -ne $lines.Count) {
+    Set-Content ".env" $kept -Encoding UTF8
+    Write-Host "Removed unused LLM_BOOST_* placeholder lines from .env." -ForegroundColor Yellow
+}
+
 $envText = Get-Content ".env" -Raw
 if ($envText -match "your_[a-z_]*_here") {
     Write-Host ".env still contains placeholder values - fill them in first." -ForegroundColor Red
