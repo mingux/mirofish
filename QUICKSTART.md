@@ -37,8 +37,13 @@ Or manually: `docker compose up -d` (prebuilt) /
 
 - UI: http://localhost:3000
 - API: http://localhost:5001
+- Run Builder (one-click pipeline launcher): http://localhost:3000/run-builder.html —
+  also reachable pre-filled from the claude.ai Run Builder artifact via
+  its "Start in MiroFish" button.
 
 Stop with `docker compose down`.
+
+Recommended install location on Windows: `C:\Dev\Mirofish`.
 
 ## Free local models (Ollama) — no LLM API costs
 
