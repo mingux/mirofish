@@ -53,6 +53,18 @@ button.go:disabled{opacity:.55;cursor:default}
 .steps li.fail{color:var(--err)}.steps li.fail::before{content:"✕"}
 #log{background:var(--mono-bg);color:var(--mono-ink);border-radius:8px;padding:10px 12px;font:12px/1.6 "IBM Plex Mono",monospace;white-space:pre-wrap;max-height:200px;overflow-y:auto;margin-top:12px;display:none}
 #log.on{display:block}
+#live{display:none;margin-top:14px}
+#live.on{display:block}
+.bar{background:var(--surface2);border:1px solid var(--line);border-radius:999px;height:14px;overflow:hidden}
+.bar>div{background:var(--accent);height:100%;width:0%;border-radius:999px;transition:width .6s}
+.tiles{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0 4px}
+.tile{flex:1 1 90px;background:var(--surface2);border-radius:8px;padding:8px 10px;text-align:center}
+.tile b{display:block;font-family:"IBM Plex Mono",monospace;font-size:18px;font-weight:500}
+.tile span{font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.feed{margin-top:10px;max-height:260px;overflow-y:auto;display:flex;flex-direction:column;gap:8px}
+.post{background:var(--surface2);border-left:3px solid var(--accent);border-radius:0 8px 8px 0;padding:8px 10px;font-size:12.5px}
+.post b{color:var(--accent);font-size:11.5px}
+.post p{margin:3px 0 0;color:var(--ink)}
 .flag{display:none;background:var(--warn-soft);color:var(--warn);border-radius:8px;padding:9px 12px;font-size:13px;margin-top:12px}
 .flag.on{display:block}
 .est{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;color:var(--muted);margin-top:10px}
@@ -130,6 +142,16 @@ a{color:var(--accent)}
       <li data-s="4">Start the run</li>
     </ol>
     <pre id="log"></pre>
+    <div id="live">
+      <div class="bar"><div id="barFill"></div></div>
+      <div class="tiles">
+        <div class="tile"><b id="lvRound">–</b><span>round</span></div>
+        <div class="tile"><b id="lvPct">–</b><span>progress</span></div>
+        <div class="tile"><b id="lvActions">–</b><span>actions</span></div>
+        <div class="tile"><b id="lvStatus">–</b><span>status</span></div>
+      </div>
+      <div class="feed" id="feed"></div>
+    </div>
   </div>
 </aside>
 </div>
@@ -222,27 +244,69 @@ function notifyDone(msg){
     o.start();o.stop(ctx.currentTime+0.4);
   }catch(e){}
 }
+function esc(s){const d=document.createElement("div");d.textContent=String(s??"");return d.innerHTML}
+async function refreshFeed(simId){
+  try{
+    const d=await api(`/api/simulation/${simId}/posts?limit=200`);
+    const posts=(d.posts||[]).slice(-6).reverse();
+    if(!posts.length) return;
+    $("feed").innerHTML=posts.map(p=>{
+      const who=p.user_name||p.username||p.name||p.agent_name||("agent "+(p.user_id??p.agent_id??"?"));
+      const txt=p.content||p.text||p.body||p.title||"";
+      return `<div class="post"><b>${esc(who)}</b><p>${esc(String(txt).slice(0,220))}</p></div>`;
+    }).join("");
+  }catch(e){}
+}
 async function monitor(simId){
   let sawRunning=false;
   const TERMINAL=["completed","finished","stopped","failed","error"];
+  $("live").classList.add("on");
   for(;;){
-    await sleep(60000);
     let st;
     try{ st=await api(`/api/simulation/${simId}/run-status`); }
-    catch(e){ log("status check failed: "+e.message); continue; }
+    catch(e){ log("status check failed: "+e.message); await sleep(30000); continue; }
     const rs=(st.runner_status||"").toLowerCase();
+    const pct=st.progress_percent??(st.total_rounds?Math.round(100*(st.current_round||0)/st.total_rounds):0);
+    $("barFill").style.width=Math.min(100,Math.round(pct))+"%";
+    $("lvRound").textContent=`${st.current_round??"–"}/${st.total_rounds??"–"}`;
+    $("lvPct").textContent=Math.round(pct)+"%";
+    $("lvActions").textContent=st.total_actions_count??"–";
+    $("lvStatus").textContent=rs||"–";
     if(rs==="running"){
       sawRunning=true;
-      const p=st.progress_percent?` (${Math.round(st.progress_percent)}%)`:"";
-      document.title=`▶ round ${st.current_round??"?"}/${st.total_rounds??"?"}${p} — MiroFish`;
-      continue;
+      document.title=`▶ ${st.current_round??"?"}/${st.total_rounds??"?"} (${Math.round(pct)}%) — MiroFish`;
+      refreshFeed(simId);
+      await sleep(30000); continue;
     }
     if(TERMINAL.includes(rs)||(sawRunning&&rs==="idle")){
+      $("barFill").style.width="100%";
       notifyDone(rs==="failed"||rs==="error"?"Run ended with an error — check the MiroFish UI.":"Simulation finished — the report is ready in the MiroFish UI.");
       return;
     }
+    await sleep(30000);
   }
 }
+// On load: attach to an already-running simulation (e.g. after a page refresh)
+(async()=>{
+  try{
+    const sims=await api("/api/simulation/list");
+    const recent=(Array.isArray(sims)?sims:sims.simulations||[]).slice(-8).reverse();
+    for(const s of recent){
+      const id=s.simulation_id||s.id; if(!id) continue;
+      try{
+        const st=await api(`/api/simulation/${id}/run-status`);
+        if((st.runner_status||"").toLowerCase()==="running"){
+          log(`Attached to running simulation ${id}.`);
+          const btn=$("go"); btn.textContent="Run in progress — open MiroFish UI ↗"; btn.disabled=false;
+          btn.onclick=()=>window.open(`http://${location.hostname||"localhost"}:3000/`,"_blank");
+          document.querySelectorAll(".steps li").forEach(li=>li.className="done");
+          monitor(id);
+          return;
+        }
+      }catch(e){}
+    }
+  }catch(e){}
+})();
 $("go").addEventListener("click",async()=>{
   try{ if(Notification.permission==="default") Notification.requestPermission(); }catch(e){}
   const flag=$("flag"); flag.classList.remove("on");
