@@ -46,7 +46,7 @@ Install [Ollama](https://ollama.com/download), then:
 
 ```powershell
 ./start.ps1 -Ollama                          # default model: qwen2.5:32b
-./start.ps1 -Ollama -Model qwen2.5:32b       # bigger = better agents, needs more VRAM
+./start.ps1 -Ollama -Model qwen2.5:14b-instruct   # smaller/faster if VRAM is tight
 ```
 
 The script checks Ollama is running, pulls the model if needed, and rewrites
