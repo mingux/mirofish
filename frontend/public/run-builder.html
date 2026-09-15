@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MiroFish Run Builder (local)</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --bg:#f4f8f8; --surface:#fff; --surface2:#eaf1f1; --ink:#152a2c; --muted:#5a7477;
+  --line:#d4e0e0; --accent:#0e7e8b; --accent-ink:#fff; --warn:#b7791f; --warn-soft:#f6ecd9;
+  --ok:#2f7d4f; --err:#b3423a; --mono-bg:#0f1f22; --mono-ink:#cfe6e9;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#0c1618; --surface:#122124; --surface2:#0f1c1f; --ink:#e2eeef; --muted:#8ea9ac;
+    --line:#24393c; --accent:#3cbcca; --accent-ink:#06272b; --warn:#d9a03f; --warn-soft:#33280f;
+    --ok:#5cc98a; --err:#e07b72; --mono-bg:#0a1517; --mono-ink:#c6e2e5;
+  }
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:15px/1.55 "IBM Plex Sans",system-ui,sans-serif;margin:0;padding:24px 16px 48px}
+.wrap{max-width:1060px;margin:0 auto}
+h1{font-family:"Bricolage Grotesque",sans-serif;font-size:clamp(24px,4vw,34px);font-weight:700;margin:0 0 4px}
+h1 span{color:var(--accent)}
+.sub{color:var(--muted);margin:0 0 20px;max-width:64ch}
+.cols{display:flex;gap:22px;align-items:flex-start;flex-wrap:wrap}
+.form{flex:1 1 380px;min-width:0}
+.side{flex:1 1 380px;min-width:0}
+fieldset{border:0;margin:0 0 16px;padding:0}
+label.f,legend.f{display:block;font-size:11.5px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin:0 0 6px}
+textarea,input[type=text],input[type=file]{width:100%;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:10px 12px;font:inherit}
+textarea{resize:vertical}
+textarea:focus,input:focus,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.seg{display:flex;flex-wrap:wrap;gap:8px}
+.seg label{cursor:pointer}
+.seg input{position:absolute;opacity:0;width:0;height:0}
+.seg span{display:inline-block;padding:7px 13px;border:1px solid var(--line);border-radius:999px;background:var(--surface);font-size:13.5px}
+.seg input:checked+span{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:600}
+.seg small{display:block;font-size:11px;opacity:.75;font-weight:400}
+.agents-row{display:flex;align-items:center;gap:14px}
+input[type=range]{flex:1;accent-color:var(--accent)}
+#agentsVal{font-family:"IBM Plex Mono",monospace;font-size:20px;min-width:2.6ch;text-align:right;font-variant-numeric:tabular-nums}
+.hint{font-size:12.5px;color:var(--muted);margin-top:5px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;margin-bottom:16px}
+button.go{width:100%;background:var(--accent);color:var(--accent-ink);border:0;border-radius:10px;padding:14px;font:700 16px "Bricolage Grotesque",sans-serif;cursor:pointer}
+button.go:disabled{opacity:.55;cursor:default}
+.steps{list-style:none;margin:14px 0 0;padding:0;font-size:14px}
+.steps li{display:flex;gap:9px;align-items:baseline;padding:5px 0;color:var(--muted)}
+.steps li::before{content:"○";flex:0 0 auto}
+.steps li.run{color:var(--ink)}.steps li.run::before{content:"◔";color:var(--accent)}
+.steps li.done{color:var(--ink)}.steps li.done::before{content:"●";color:var(--ok)}
+.steps li.fail{color:var(--err)}.steps li.fail::before{content:"✕"}
+#log{background:var(--mono-bg);color:var(--mono-ink);border-radius:8px;padding:10px 12px;font:12px/1.6 "IBM Plex Mono",monospace;white-space:pre-wrap;max-height:200px;overflow-y:auto;margin-top:12px;display:none}
+#log.on{display:block}
+.flag{display:none;background:var(--warn-soft);color:var(--warn);border-radius:8px;padding:9px 12px;font-size:13px;margin-top:12px}
+.flag.on{display:block}
+.est{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;color:var(--muted);margin-top:10px}
+.est b{font-family:"IBM Plex Mono",monospace;font-weight:500;color:var(--ink)}
+a{color:var(--accent)}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>MiroFish Run Builder <span>· local</span></h1>
+<p class="sub">This page talks directly to your MiroFish backend. Fill it in (or arrive pre-filled from the claude.ai builder), attach seed documents, and launch — it drives the whole pipeline for you.</p>
+
+<div class="cols">
+<form class="form" id="form" autocomplete="off" onsubmit="return false">
+  <fieldset>
+    <label class="f" for="pname">Project name</label>
+    <input type="text" id="pname" value="My simulation">
+  </fieldset>
+  <fieldset>
+    <label class="f" for="task">Task — the scenario to simulate</label>
+    <textarea id="task" rows="4"></textarea>
+  </fieldset>
+  <fieldset>
+    <label class="f" for="outcome">Outcome — the prediction question</label>
+    <textarea id="outcome" rows="3"></textarea>
+  </fieldset>
+  <fieldset>
+    <label class="f" for="files">Seed documents (PDF / MD / TXT — required)</label>
+    <input type="file" id="files" multiple accept=".pdf,.md,.txt">
+  </fieldset>
+  <fieldset>
+    <legend class="f">Agents — target population</legend>
+    <div class="agents-row">
+      <input type="range" id="agents" min="5" max="200" step="5" value="10" aria-label="Target number of agents">
+      <b id="agentsVal">10</b>
+    </div>
+    <p class="hint">MiroFish derives personas from your seed material — this target is written into the brief to steer it, not a hard cap.</p>
+  </fieldset>
+  <fieldset>
+    <legend class="f">Effort (max rounds — enforced)</legend>
+    <div class="seg">
+      <label><input type="radio" name="effort" value="10"><span>Quick<small>10 rounds</small></span></label>
+      <label><input type="radio" name="effort" value="25" checked><span>Standard<small>25 rounds</small></span></label>
+      <label><input type="radio" name="effort" value="40"><span>Deep<small>40 rounds</small></span></label>
+      <label><input type="radio" name="effort" value="60"><span>Marathon<small>60 rounds</small></span></label>
+    </div>
+  </fieldset>
+  <fieldset>
+    <legend class="f">Platform</legend>
+    <div class="seg">
+      <label><input type="radio" name="platform" value="twitter" checked><span>Twitter-like</span></label>
+      <label><input type="radio" name="platform" value="reddit"><span>Reddit-like</span></label>
+      <label><input type="radio" name="platform" value="parallel"><span>Both</span></label>
+    </div>
+  </fieldset>
+  <fieldset>
+    <label class="f" for="langs">Languages</label>
+    <input type="text" id="langs" value="English">
+  </fieldset>
+</form>
+
+<aside class="side">
+  <div class="panel">
+    <button class="go" id="go" type="button">Launch simulation</button>
+    <div class="est">
+      <span>≈<b id="eTurns">—</b> agent-turns</span>
+      <span>≈<b id="eTime">—</b> on a local model</span>
+    </div>
+    <div class="flag" id="flag"></div>
+    <ol class="steps" id="steps">
+      <li data-s="0">Analyze seed docs &amp; create project</li>
+      <li data-s="1">Build knowledge graph (Zep)</li>
+      <li data-s="2">Create simulation</li>
+      <li data-s="3">Generate agent profiles &amp; config</li>
+      <li data-s="4">Start the run</li>
+    </ol>
+    <pre id="log"></pre>
+  </div>
+</aside>
+</div>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const API=`http://${location.hostname||"localhost"}:5001`;
+const val=n=>document.querySelector(`input[name=${n}]:checked`).value;
+const log=m=>{const l=$("log");l.classList.add("on");l.textContent+=m+"\n";l.scrollTop=l.scrollHeight};
+const setStep=(i,cls)=>{const li=document.querySelector(`li[data-s="${i}"]`);li.className=cls};
+
+// Prefill from claude.ai builder: #cfg=<base64url JSON>
+try{
+  const m=location.hash.match(/cfg=([A-Za-z0-9_-]+)/);
+  if(m){
+    const d=JSON.parse(decodeURIComponent(escape(atob(m[1].replace(/-/g,"+").replace(/_/g,"/")))));
+    if(d.t)$("task").value=d.t; if(d.o)$("outcome").value=d.o; if(d.l)$("langs").value=d.l;
+    if(d.a)$("agents").value=d.a; if(d.n)$("pname").value=d.n;
+    if(d.e){const el=document.querySelector(`input[name=effort][value="${d.e}"]`); if(el)el.checked=true;}
+    if(d.p){const el=document.querySelector(`input[name=platform][value="${d.p}"]`); if(el)el.checked=true;}
+  }
+}catch(e){}
+
+function estimates(){
+  const turns=Math.round(+$("agents").value * +val("effort") * 1.25);
+  $("agentsVal").textContent=$("agents").value;
+  $("eTurns").textContent=turns>=1000?Math.round(turns/1000)+"K":turns;
+  const s=turns*28+180; $("eTime").textContent=s<5400?"~"+Math.round(s/60)+" min":"~"+(s/3600).toFixed(1)+" h";
+}
+$("form").addEventListener("input",estimates); estimates();
+
+function brief(){
+  return `SIMULATION BRIEF
+================
+
+## Scenario
+${$("task").value.trim()}
+
+## Prediction question
+${$("outcome").value.trim()}
+
+## Population
+- Target approximately ${$("agents").value} agents with distinct personas derived from the seed material
+- Languages: ${$("langs").value.trim()||"English"} — agents post in their own language
+
+## Report requirements
+- Answer the prediction question directly, with a confidence level
+- Timeline of opinion shifts, citing the round numbers where they happen
+- Cover dissent and minority clusters, not only the majority view
+- Quote representative agent posts as evidence (translated to English)`;
+}
+
+async function api(path,opts){
+  const r=await fetch(API+path,opts);
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok||j.success===false) throw new Error(j.error||`${path} → HTTP ${r.status}`);
+  return j.data??j;
+}
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+async function pollGraphTask(taskId){
+  for(;;){
+    const t=await api(`/api/graph/task/${taskId}`);
+    if(t.status==="completed")return t;
+    if(t.status==="failed")throw new Error(t.error||t.message||"graph build failed");
+    log(`  graph: ${t.progress??"?"}% ${t.message||""}`.trimEnd());
+    await sleep(4000);
+  }
+}
+async function pollPrepare(simId,taskId){
+  for(;;){
+    const t=await api("/api/simulation/prepare/status",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({task_id:taskId,simulation_id:simId})});
+    if(t.status==="completed"||t.status==="ready"||t.already_prepared)return t;
+    if(t.status==="failed")throw new Error(t.error||t.message||"prepare failed");
+    log(`  prepare: ${t.progress??"?"}% ${t.message||""}`.trimEnd());
+    await sleep(4000);
+  }
+}
+
+$("go").addEventListener("click",async()=>{
+  const flag=$("flag"); flag.classList.remove("on");
+  const files=$("files").files;
+  if(!$("task").value.trim()||!$("outcome").value.trim()){flag.textContent="Fill in the task and the outcome first.";flag.classList.add("on");return}
+  if(!files.length){flag.textContent="Attach at least one seed document (PDF, MD or TXT) — MiroFish builds the world from it.";flag.classList.add("on");return}
+  const btn=$("go"); btn.disabled=true; btn.textContent="Running…";
+  document.querySelectorAll(".steps li").forEach(li=>li.className="");
+  try{
+    // 1. ontology + project
+    setStep(0,"run"); log("Creating project & analyzing seed docs (LLM — can take minutes)…");
+    const fd=new FormData();
+    fd.append("simulation_requirement",brief());
+    fd.append("project_name",$("pname").value.trim()||"My simulation");
+    for(const f of files) fd.append("files",f);
+    const p=await api("/api/graph/ontology/generate",{method:"POST",body:fd});
+    log(`  project ${p.project_id}`); setStep(0,"done");
+    // 2. graph
+    setStep(1,"run"); log("Building knowledge graph…");
+    const b=await api("/api/graph/build",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({project_id:p.project_id})});
+    await pollGraphTask(b.task_id); setStep(1,"done"); log("  graph ready");
+    // 3. create
+    setStep(2,"run");
+    const plat=val("platform");
+    const sim=await api("/api/simulation/create",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({project_id:p.project_id,enable_twitter:plat!=="reddit",enable_reddit:plat!=="twitter"})});
+    log(`  simulation ${sim.simulation_id}`); setStep(2,"done");
+    // 4. prepare
+    setStep(3,"run"); log("Generating agent profiles & config…");
+    const prep=await api("/api/simulation/prepare",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({simulation_id:sim.simulation_id})});
+    if(!prep.already_prepared) await pollPrepare(sim.simulation_id,prep.task_id);
+    setStep(3,"done"); log("  profiles ready");
+    // 5. start
+    setStep(4,"run");
+    await api("/api/simulation/start",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({simulation_id:sim.simulation_id,platform:plat,max_rounds:+val("effort")})});
+    setStep(4,"done");
+    log("RUNNING ✓ — watch it in the MiroFish UI.");
+    btn.textContent="Running — open MiroFish UI ↗";
+    btn.disabled=false;
+    btn.onclick=()=>window.open(`http://${location.hostname||"localhost"}:3000/`,"_blank");
+  }catch(e){
+    log("ERROR: "+e.message);
+    document.querySelectorAll(".steps li.run").forEach(li=>li.className="fail");
+    flag.textContent=e.message.includes("fetch")?"Can't reach the backend on :5001 — is MiroFish running? (./start.ps1)":e.message;
+    flag.classList.add("on");
+    btn.disabled=false; btn.textContent="Launch simulation";
+  }
+});
+</script>
+</body>
+</html>
