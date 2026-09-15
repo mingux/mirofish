@@ -75,6 +75,7 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 $composeArgs = @("-f", $(if ($Build) { "docker-compose.build.yml" } else { "docker-compose.yml" }))
+$composeArgs += @("-f", "docker-compose.local.yml")
 if ($Ollama) { $composeArgs += @("-f", "docker-compose.ollama.yml") }
 
 if ($Build) {

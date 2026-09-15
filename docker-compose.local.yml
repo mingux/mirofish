@@ -1,0 +1,8 @@
+# Overlay: serve this repo's frontend/public (incl. run-builder.html) from
+# the container, so local additions work even with the prebuilt image.
+# start.ps1 includes this automatically.
+services:
+  mirofish:
+    volumes:
+      - ./backend/uploads:/app/backend/uploads
+      - ./frontend/public:/app/frontend/public
