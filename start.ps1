@@ -26,11 +26,11 @@ function Set-EnvLine([string]$Name, [string]$Value) {
 if (-not (Test-Path ".env")) {
     Copy-Item ".env.example" ".env"
     if (-not $Ollama) {
-        Write-Host "Created .env — fill in LLM_API_KEY and ZEP_API_KEY, then run this again." -ForegroundColor Yellow
+        Write-Host "Created .env - fill in LLM_API_KEY and ZEP_API_KEY, then run this again." -ForegroundColor Yellow
         notepad .env
         exit 1
     }
-    Write-Host "Created .env — Ollama mode will fill the LLM settings; you still need ZEP_API_KEY." -ForegroundColor Yellow
+    Write-Host "Created .env - Ollama mode will fill the LLM settings; you still need ZEP_API_KEY." -ForegroundColor Yellow
 }
 
 if ($Ollama) {
@@ -45,10 +45,10 @@ if ($Ollama) {
     # 2. Model pulled?
     $have = @($tags.models | ForEach-Object { $_.name })
     if (-not ($have -contains $Model -or $have -contains "$Model`:latest")) {
-        Write-Host "Model '$Model' not found locally — pulling it now (this can take a while)..." -ForegroundColor Yellow
+        Write-Host "Model '$Model' not found locally - pulling it now (this can take a while)..." -ForegroundColor Yellow
         ollama pull $Model
         if ($LASTEXITCODE -ne 0) {
-            Write-Host "ollama pull failed — check the model name (https://ollama.com/library)." -ForegroundColor Red
+            Write-Host "ollama pull failed - check the model name (https://ollama.com/library)." -ForegroundColor Red
             exit 1
         }
     }
@@ -62,15 +62,15 @@ if ($Ollama) {
 
 $envText = Get-Content ".env" -Raw
 if ($envText -match "your_[a-z_]*_here") {
-    Write-Host ".env still contains placeholder values — fill them in first." -ForegroundColor Red
-    Write-Host "(Ollama mode still needs ZEP_API_KEY — free tier at https://app.getzep.com/)"
+    Write-Host ".env still contains placeholder values - fill them in first." -ForegroundColor Red
+    Write-Host "(Ollama mode still needs ZEP_API_KEY - free tier at https://app.getzep.com/)"
     notepad .env
     exit 1
 }
 
 docker info *> $null
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "Docker Desktop is not running — start it and try again." -ForegroundColor Red
+    Write-Host "Docker Desktop is not running - start it and try again." -ForegroundColor Red
     exit 1
 }
 
