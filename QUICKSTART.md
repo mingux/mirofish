@@ -45,7 +45,7 @@ Stop with `docker compose down`.
 Install [Ollama](https://ollama.com/download), then:
 
 ```powershell
-./start.ps1 -Ollama                          # default model: qwen2.5:14b-instruct
+./start.ps1 -Ollama                          # default model: qwen2.5:32b
 ./start.ps1 -Ollama -Model qwen2.5:32b       # bigger = better agents, needs more VRAM
 ```
 

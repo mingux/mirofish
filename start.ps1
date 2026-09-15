@@ -2,11 +2,11 @@
 # Usage: ./start.ps1 [-Build] [-Ollama] [-Model <ollama model>]
 #   -Build   build the Docker image from this repo's source instead of pulling
 #   -Ollama  use a free local model via Ollama instead of a paid API
-#   -Model   Ollama model to use (default: qwen2.5:14b-instruct)
+#   -Model   Ollama model to use (default: qwen2.5:32b)
 param(
     [switch]$Build,
     [switch]$Ollama,
-    [string]$Model = "qwen2.5:14b-instruct"
+    [string]$Model = "qwen2.5:32b"
 )
 
 $ErrorActionPreference = "Stop"
